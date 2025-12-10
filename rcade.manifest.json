@@ -1,0 +1,16 @@
+{
+  "$schema": "https://rcade.dev/manifest.schema.json",
+  "name": "dancercade",
+  "display_name": "Dancercade",
+  "description": "Don't you want to dance with me baby!",
+  "visibility": "public",
+  "authors": {
+    "display_name": "Claire Kwong"
+  },
+  "dependencies": [
+    {
+      "name": "@rcade/input-classic",
+      "version": "1.0.0"
+    }
+  ]
+}
