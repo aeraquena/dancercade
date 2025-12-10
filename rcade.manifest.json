@@ -12,5 +12,6 @@
       "name": "@rcade/input-classic",
       "version": "1.0.0"
     }
-  ]
+  ],
+  "permissions": ["camera"]
 }
