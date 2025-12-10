@@ -14,6 +14,8 @@ app.innerHTML = `
 const status = document.querySelector<HTMLParagraphElement>("#status")!;
 const controls = document.querySelector<HTMLDivElement>("#controls")!;
 
+const colors = ["#ff0000", "#0000ff"];
+
 let gameStarted = false;
 
 /* MediaPipe declarations */
@@ -33,6 +35,22 @@ const constraints: MediaStreamConstraints = {
 let lastVideoTime = -1;
 let webcamRunning: Boolean = false;
 
+function isPerson0(landmarkSet: NormalizedLandmark[]) {
+  return landmarkSet[0].x > 0.5;
+}
+
+function handlePerson(landmarkSet: NormalizedLandmark[], color: string) {
+  drawingUtils.drawLandmarks(landmarkSet, {
+    radius: (data: any) =>
+      DrawingUtils.lerp((data.from?.z ?? 0) as number, -0.15, 0.1, 5, 1),
+    color: color,
+  });
+  drawingUtils.drawConnectors(
+    landmarkSet,
+    PoseLandmarker.POSE_CONNECTIONS as any
+  );
+}
+
 // Process each video frame and create pose landmarker
 async function predictWebcam() {
   let startTimeMs = performance.now();
@@ -40,7 +58,7 @@ async function predictWebcam() {
   if (lastVideoTime !== video.currentTime) {
     lastVideoTime = video.currentTime;
     poseLandmarker.detectForVideo(video, startTimeMs, (result) => {
-      console.log(result);
+      //   console.log(result);
 
       // Drawing tools
 
@@ -48,16 +66,41 @@ async function predictWebcam() {
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
       // Iterates over bodies. We have to extract indices 1-10 from each.
-      for (const landmark of result.landmarks) {
+      //for (const landmark of result.landmarks) {
+
+      try {
+        console.log("PERSON 0", result.landmarks[0][0]);
+        console.log("PERSON 1", result.landmarks[1][0]);
+      } catch (e) {}
+
+      for (let i = 0; i < result.landmarks.length; i++) {
+        if (isPerson0(result.landmarks[i])) {
+          handlePerson(result.landmarks[i], colors[0]);
+        } else {
+          handlePerson(result.landmarks[i], colors[1]);
+        }
+
         //for (const index in result.landmarks) {
-        drawingUtils.drawLandmarks(landmark as NormalizedLandmark[], {
-          radius: (data: any) =>
-            DrawingUtils.lerp((data.from?.z ?? 0) as number, -0.15, 0.1, 5, 1),
-        });
+        /*
+        drawingUtils.drawLandmarks(
+          result.landmarks[i] as NormalizedLandmark[],
+          {
+            radius: (data: any) =>
+              DrawingUtils.lerp(
+                (data.from?.z ?? 0) as number,
+                -0.15,
+                0.1,
+                5,
+                1
+              ),
+            color: colors[i],
+          }
+        );
         drawingUtils.drawConnectors(
-          landmark as NormalizedLandmark[],
+          result.landmarks[i] as NormalizedLandmark[],
           PoseLandmarker.POSE_CONNECTIONS as any
         );
+        */
       }
     });
   }

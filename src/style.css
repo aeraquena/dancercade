@@ -4,7 +4,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   width: 336px;
   height: 262px;
   overflow: hidden;
@@ -39,4 +40,11 @@ button {
 
 button:hover {
   background-color: #5a5a7a;
+}
+
+.output_canvas {
+  transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
+  -moz-transform: rotateY(180deg);
+  border: 2px solid #fff;
 }
