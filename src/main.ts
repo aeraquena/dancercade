@@ -35,7 +35,7 @@ const constraints: MediaStreamConstraints = {
 let lastVideoTime = -1;
 let webcamRunning: Boolean = false;
 
-function isPerson0(landmarkSet: NormalizedLandmark[]) {
+function isLeftPerson(landmarkSet: NormalizedLandmark[]) {
   return landmarkSet[0].x > 0.5;
 }
 
@@ -45,10 +45,77 @@ function handlePerson(landmarkSet: NormalizedLandmark[], color: string) {
       DrawingUtils.lerp((data.from?.z ?? 0) as number, -0.15, 0.1, 5, 1),
     color: color,
   });
+
   drawingUtils.drawConnectors(
     landmarkSet,
     PoseLandmarker.POSE_CONNECTIONS as any
   );
+}
+
+interface ColoredPoint {
+  color: string;
+  landmark: NormalizedLandmark;
+}
+
+const RIGHT_ARM_POINTS = [
+  JOINTS.RIGHT_SHOULDER,
+  JOINTS.RIGHT_ELBOW,
+  JOINTS.RIGHT_WRIST,
+  JOINTS.RIGHT_PINKY,
+  JOINTS.RIGHT_INDEX,
+];
+
+function transform(
+  leftBody: NormalizedLandmark[],
+  rightBody: NormalizedLandmark[]
+): ColoredPoint[] {
+  const leftBodyRightShoulder = leftBody[12];
+  const rightBodyRightShoulder = rightBody[12];
+
+  const xDelta = leftBodyRightShoulder.x - rightBodyRightShoulder.x;
+  const yDelta = leftBodyRightShoulder.y - rightBodyRightShoulder.y;
+
+  let coloredPoints: ColoredPoint[] = [];
+
+  for (let i = 0; i < leftBody.length; i++) {
+    if (RIGHT_ARM_POINTS.includes(i)) {
+      // pull the point and transform it onto the right person
+      // color it the RIGHT body color (blue)
+      coloredPoints.push({
+        color: colors[1],
+        landmark: {
+          x: leftBody[i].x - xDelta,
+          y: leftBody[i].y - yDelta,
+          z: leftBody[i].z,
+          visibility: leftBody[i].visibility,
+        },
+      });
+    } else {
+      // assign the correct LEFT color
+      coloredPoints.push({ color: colors[0], landmark: leftBody[i] });
+    }
+  }
+
+  for (let i = 0; i < rightBody.length; i++) {
+    if (RIGHT_ARM_POINTS.includes(i)) {
+      // pull the point and transform it onto the right person
+      // color it the RIGHT body color (blue)
+      coloredPoints.push({
+        color: colors[0],
+        landmark: {
+          x: rightBody[i].x + xDelta,
+          y: rightBody[i].y + yDelta,
+          z: rightBody[i].z,
+          visibility: rightBody[i].visibility,
+        },
+      });
+    } else {
+      // assign the correct LEFT color
+      coloredPoints.push({ color: colors[1], landmark: rightBody[i] });
+    }
+  }
+
+  return coloredPoints;
 }
 
 // Process each video frame and create pose landmarker
@@ -68,23 +135,18 @@ async function predictWebcam() {
       // Iterates over bodies. We have to extract indices 1-10 from each.
       //for (const landmark of result.landmarks) {
 
-      try {
-        console.log("PERSON 0", result.landmarks[0][0]);
-        console.log("PERSON 1", result.landmarks[1][0]);
-      } catch (e) {}
+      if (result.landmarks.length == 2) {
+        const leftPerson = isLeftPerson(result.landmarks[0])
+          ? result.landmarks[0]
+          : result.landmarks[1];
+        const rightPerson = isLeftPerson(result.landmarks[0])
+          ? result.landmarks[1]
+          : result.landmarks[0];
 
-      for (let i = 0; i < result.landmarks.length; i++) {
-        if (isPerson0(result.landmarks[i])) {
-          handlePerson(result.landmarks[i], colors[0]);
-        } else {
-          handlePerson(result.landmarks[i], colors[1]);
-        }
+        const coloredPoints = transform(leftPerson, rightPerson);
 
-        //for (const index in result.landmarks) {
-        /*
-        drawingUtils.drawLandmarks(
-          result.landmarks[i] as NormalizedLandmark[],
-          {
+        coloredPoints.forEach((coloredPoint) => {
+          drawingUtils.drawLandmarks([coloredPoint.landmark], {
             radius: (data: any) =>
               DrawingUtils.lerp(
                 (data.from?.z ?? 0) as number,
@@ -93,14 +155,18 @@ async function predictWebcam() {
                 5,
                 1
               ),
-            color: colors[i],
-          }
-        );
-        drawingUtils.drawConnectors(
-          result.landmarks[i] as NormalizedLandmark[],
-          PoseLandmarker.POSE_CONNECTIONS as any
-        );
-        */
+            color: coloredPoint.color,
+          });
+        });
+
+        for (let i = 0; i < result.landmarks.length; i++) {
+          result.landmarks.forEach((l) => {
+            drawingUtils.drawConnectors(
+              l as NormalizedLandmark[],
+              PoseLandmarker.POSE_CONNECTIONS as any
+            );
+          });
+        }
       }
     });
   }
