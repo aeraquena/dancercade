@@ -167,6 +167,26 @@ async function predictWebcam() {
             );
           });
         }
+      } else {
+        // 1 person
+        for (let i = 0; i < result.landmarks.length; i++) {
+          result.landmarks.forEach((l) => {
+            drawingUtils.drawLandmarks(l as NormalizedLandmark[], {
+              radius: (data: any) =>
+                DrawingUtils.lerp(
+                  (data.from?.z ?? 0) as number,
+                  -0.15,
+                  0.1,
+                  5,
+                  1
+                ),
+            });
+            drawingUtils.drawConnectors(
+              l as NormalizedLandmark[],
+              PoseLandmarker.POSE_CONNECTIONS as any
+            );
+          });
+        }
       }
     });
   }
